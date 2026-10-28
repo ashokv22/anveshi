@@ -2,7 +2,7 @@
 
 An independent, open-source, self-hostable, identifier-first application intelligence engine.
 
-**Status:** Day 1 skeleton. The current endpoint returns only directly matching synthetic events. Correlation, timeline reconstruction, failure detection, and root-cause analysis are **not implemented**.
+**Status:** Correlation Engine v0.1. The investigation endpoint performs deterministic, bounded identifier correlation over synthetic events. Timeline reconstruction, failure detection, and root-cause analysis are **not implemented**.
 
 ## Prerequisites
 - Python 3.11+ (recommended: 3.12)
@@ -32,18 +32,19 @@ npm run dev
 
 UI: http://127.0.0.1:5173
 
-Enter `txn-123` and investigate. The API returns two direct matches; the bank-connector event has only `request_id` and will appear only after correlation is implemented.
+Enter `txn-123` and investigate. The UI shows the three connected events across the API gateway, payment service, and bank connector. The unrelated `req-999` event is excluded.
 
 ## API example
 ```json
 {"identifier_type":"transaction_id","identifier_value":"txn-123"}
 ```
 POST to `/api/v1/investigations`. The request currently supports exact key/value matching against `samples/incident_001.json`.
+The response includes the original event fields plus correlation evidence (`correlation_type`, `depth`, parent event, and matched identifier), aggregate statistics, and a truncation flag. Correlation expands only through `transaction_id`, `request_id`, and `trace_id`; `user_id`, `tenant_id`, and `session_id` are not safe bridges. The default limits are a depth of 2 and 500 events. The configured 15-minute investigation window is not yet applied.
 
 ## Project structure
 - `backend/app/models`: normalized event and investigation contracts
 - `backend/app/sources`: source adapter interface and synthetic adapter
-- `backend/app/engine`: reserved for deterministic investigation logic
+- `backend/app/engine`: deterministic correlation logic
 - `backend/app/api`: REST routes
 - `backend/tests`: backend tests
 - `frontend`: React/TypeScript/Vite application
@@ -53,4 +54,4 @@ POST to `/api/v1/investigations`. The request currently supports exact key/value
 Evidence first. Never invent missing identifiers, events, causal relationships, or root causes. Keep the deterministic core independent of AI and source providers.
 
 ## Next milestone
-Implement bounded identifier correlation with explicit inclusion evidence and deterministic tests.
+Implement chronological timeline reconstruction, then deterministic failure detection with explicit evidence.

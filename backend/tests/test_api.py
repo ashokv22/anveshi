@@ -13,8 +13,15 @@ def test_health():
 def test_direct_investigation():
     response = client.post("/api/v1/investigations", json={"identifier_type": "transaction_id", "identifier_value": "txn-123"})
     assert response.status_code == 200
-    assert len(response.json()["events"]) == 2
-    assert all(e["identifiers"]["transaction_id"] == "txn-123" for e in response.json()["events"])
+    result = response.json()
+    assert [event["event_id"] for event in result["events"]] == ["evt-001", "evt-002", "evt-003"]
+    assert [event["correlation_type"] for event in result["events"]] == [
+        "direct",
+        "discovered",
+        "discovered",
+    ]
+    assert result["correlation_statistics"]["total_count"] == 3
+    assert result["truncated"] is False
 
 
 def test_unknown_identifier():
@@ -25,4 +32,12 @@ def test_unknown_identifier():
 
 def test_invalid_request():
     response = client.post("/api/v1/investigations", json={"identifier_type": "", "identifier_value": "txn-123"})
+    assert response.status_code == 422
+
+
+def test_whitespace_request_is_invalid():
+    response = client.post(
+        "/api/v1/investigations",
+        json={"identifier_type": " ", "identifier_value": "txn-123"},
+    )
     assert response.status_code == 422

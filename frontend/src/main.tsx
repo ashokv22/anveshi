@@ -2,8 +2,34 @@ import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import './style.css';
 
-type Event = { event_id: string; timestamp: string; service: string; level?: string; message: string };
-type Result = { summary: string; events: Event[]; limitations: string[] };
+type Event = {
+  event_id: string;
+  timestamp: string;
+  service: string;
+  level?: string;
+  message: string;
+  correlation_type: 'direct' | 'discovered';
+  depth: number;
+  parent_event_id: string | null;
+  matched_identifier_key: string;
+  matched_identifier_value: string;
+};
+type Result = {
+  identifier_type: string;
+  identifier_value: string;
+  summary: string;
+  events: Event[];
+  limitations: string[];
+  truncated: boolean;
+  correlation_statistics: {
+    direct_count: number;
+    discovered_count: number;
+    total_count: number;
+    depth_reached: number;
+    max_depth: number;
+    max_events: number;
+  };
+};
 
 function App() {
   const [identifier, setIdentifier] = useState('txn-123');
@@ -22,11 +48,24 @@ function App() {
     finally { setLoading(false); }
   }
 
+  const chronologicalEvents = result?.events.slice().sort((left, right) =>
+    Date.parse(left.timestamp) - Date.parse(right.timestamp) ||
+    left.event_id.localeCompare(right.event_id),
+  ) ?? [];
+  const participatingServices = [...new Set(result?.events.map(event => event.service) ?? [])].sort();
+
   return <main><header><span className="eyebrow">APPLICATION INTELLIGENCE ENGINE</span><h1>ANVESHI <span className="version">v0.1</span></h1><p>Investigate applications by identifier, not by guessing which dashboard to open.</p></header>
     <section className="panel"><h2>New investigation</h2><form onSubmit={investigate}><label htmlFor="identifier">Transaction ID</label><div className="search"><input id="identifier" value={identifier} onChange={e => setIdentifier(e.target.value)} required/><button disabled={loading}>{loading ? 'Investigating...' : 'Investigate'}</button></div></form></section>
     {error && <p role="alert" className="error">{error}</p>}
-    {result && <section className="panel"><h2>Results</h2><p>{result.summary}</p><div className="events">{result.events.map(event => <article key={event.event_id}><time>{new Date(event.timestamp).toLocaleString()}</time><strong>{event.service}</strong><span className="level">{event.level ?? 'UNKNOWN'}</span><p>{event.message}</p></article>)}</div><h3>Limitations</h3><ul>{result.limitations.map(item => <li key={item}>{item}</li>)}</ul></section>}
-    <footer>Day 1 skeleton · Synthetic source only · No correlation yet</footer></main>;
+    {result && <section className="panel"><h2>Results</h2><p className="identifier-result">{result.identifier_type} = <strong>{result.identifier_value}</strong></p><p>{result.summary}</p>
+      <div className="stats"><div><strong>{result.correlation_statistics.total_count}</strong><span>Correlated events</span></div><div><strong>{participatingServices.length}</strong><span>Services</span></div><div><strong>{result.correlation_statistics.depth_reached}/{result.correlation_statistics.max_depth}</strong><span>Depth reached</span></div></div>
+      <p className="services"><strong>Participating services:</strong> {participatingServices.length ? participatingServices.join(', ') : 'None'}</p>
+      {result.truncated && <p role="alert" className="warning">Evidence is incomplete: the event limit was reached.</p>}
+      <div className="events">{chronologicalEvents.map(event => <article key={event.event_id}>
+        <time>{new Date(event.timestamp).toLocaleString()}</time><div className="event-heading"><strong>{event.service}</strong><span className={`correlation ${event.correlation_type}`}>{event.correlation_type} · depth {event.depth}</span><span className="level">{event.level ?? 'UNKNOWN'}</span></div>
+        <p>{event.message}</p><p className="evidence">Matched {event.matched_identifier_key} = {event.matched_identifier_value}{event.parent_event_id && <> · discovered from <code>{event.parent_event_id}</code></>}</p>
+      </article>)}</div><h3>Limitations</h3><ul>{result.limitations.map(item => <li key={item}>{item}</li>)}</ul></section>}
+    <footer>ANVESHI v0.1 · Synthetic source · Deterministic identifier correlation</footer></main>;
 }
 
 createRoot(document.getElementById('root')!).render(<React.StrictMode><App /></React.StrictMode>);
