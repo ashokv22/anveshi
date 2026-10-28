@@ -2,7 +2,7 @@
 
 An independent, open-source, self-hostable, identifier-first application intelligence engine.
 
-**Status:** Correlation Engine v0.1. The investigation endpoint performs deterministic, bounded identifier correlation over synthetic events. Timeline reconstruction, failure detection, and root-cause analysis are **not implemented**.
+**Status:** Investigation Intelligence v0.1. The investigation endpoint performs deterministic, bounded identifier correlation, time-window filtering, chronological timeline reconstruction, and evidence-based failure detection over synthetic events. Root-cause analysis is not implemented.
 
 ## Prerequisites
 - Python 3.11+ (recommended: 3.12)
@@ -39,12 +39,12 @@ Enter `txn-123` and investigate. The UI shows the three connected events across 
 {"identifier_type":"transaction_id","identifier_value":"txn-123"}
 ```
 POST to `/api/v1/investigations`. The request currently supports exact key/value matching against `samples/incident_001.json`.
-The response includes the original event fields plus correlation evidence (`correlation_type`, `depth`, parent event, and matched identifier), aggregate statistics, and a truncation flag. Correlation expands only through `transaction_id`, `request_id`, and `trace_id`; `user_id`, `tenant_id`, and `session_id` are not safe bridges. The default limits are a depth of 2 and 500 events. The configured 15-minute investigation window is not yet applied.
+The response includes the original event fields plus correlation evidence (`correlation_type`, `depth`, parent event, and matched identifier), aggregate statistics, findings, a chronological timeline, investigation status, and an effective time window. The optional `reference_timestamp` request field overrides the default anchor; otherwise, the earliest direct match anchors the inclusive 15-minute window. Correlation expands only through `transaction_id`, `request_id`, and `trace_id`; `user_id`, `tenant_id`, and `session_id` are not safe bridges. The default correlation limits are a depth of 2 and 500 events. Failure indicators include ERROR/FATAL severity, HTTP 5xx, structured failure statuses, and timeout indicators. Findings report observed evidence and do not claim root cause.
 
 ## Project structure
 - `backend/app/models`: normalized event and investigation contracts
 - `backend/app/sources`: source adapter interface and synthetic adapter
-- `backend/app/engine`: deterministic correlation logic
+- `backend/app/engine`: deterministic correlation and investigation intelligence
 - `backend/app/api`: REST routes
 - `backend/tests`: backend tests
 - `frontend`: React/TypeScript/Vite application
@@ -54,4 +54,4 @@ The response includes the original event fields plus correlation evidence (`corr
 Evidence first. Never invent missing identifiers, events, causal relationships, or root causes. Keep the deterministic core independent of AI and source providers.
 
 ## Next milestone
-Implement chronological timeline reconstruction, then deterministic failure detection with explicit evidence.
+Connect production telemetry sources while preserving the explicit evidence and unknown-root-cause contract.
